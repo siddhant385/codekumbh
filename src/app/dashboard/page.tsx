@@ -68,7 +68,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
-      <DashboardRealtimeListener />
+      <DashboardRealtimeListener myPropertyIds={propertyIds} userId={user.id} />
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">

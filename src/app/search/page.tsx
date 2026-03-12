@@ -1,15 +1,38 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Search, MapPin, IndianRupee, ArrowLeft, BedDouble, Ruler } from "lucide-react";
+import { Search, MapPin, IndianRupee, ArrowLeft, BedDouble, Ruler, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Property } from "@/lib/schema/property.schema";
 
+const ITEMS_PER_PAGE = 12;
+
+const PROPERTY_TYPES = [
+  { value: "", label: "All Types" },
+  { value: "apartment", label: "Apartment" },
+  { value: "villa", label: "Villa" },
+  { value: "independent_house", label: "House" },
+  { value: "plot", label: "Plot" },
+  { value: "commercial", label: "Commercial" },
+];
+
 interface Props {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    type?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    page?: string;
+  }>;
 }
 
 export default async function SearchPage({ searchParams }: Props) {
-  const { q } = await searchParams;
+  const params = await searchParams;
+  const q = params.q;
+  const typeFilter = params.type ?? "";
+  const minPrice = params.minPrice ? Number(params.minPrice) : undefined;
+  const maxPrice = params.maxPrice ? Number(params.maxPrice) : undefined;
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+
   const supabase = await createClient();
 
   const {
@@ -18,20 +41,58 @@ export default async function SearchPage({ searchParams }: Props) {
   if (!user) redirect("/auth/login");
 
   let results: Property[] = [];
+  let totalCount = 0;
 
-  if (q && q.trim()) {
-    const { data, error } = await supabase
+  const hasFilters = !!(q?.trim() || typeFilter || minPrice || maxPrice);
+
+  if (hasFilters) {
+    let query = supabase
       .from("properties")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("is_active", true)
-      .eq("status", "active")
-      .or(
-        `title.ilike.%${q}%,city.ilike.%${q}%,state.ilike.%${q}%,address.ilike.%${q}%,property_type.ilike.%${q}%`
-      )
-      .order("created_at", { ascending: false })
-      .limit(30);
+      .eq("status", "active");
 
-    if (!error) results = (data ?? []) as Property[];
+    // Text search — sanitize by escaping special chars
+    if (q && q.trim()) {
+      const safe = q.trim().replace(/[%_]/g, "");
+      if (safe) {
+        query = query.or(
+          `title.ilike.%${safe}%,city.ilike.%${safe}%,state.ilike.%${safe}%,address.ilike.%${safe}%,property_type.ilike.%${safe}%`
+        );
+      }
+    }
+
+    if (typeFilter) query = query.eq("property_type", typeFilter);
+    if (minPrice) query = query.gte("asking_price", minPrice);
+    if (maxPrice) query = query.lte("asking_price", maxPrice);
+
+    const from = (page - 1) * ITEMS_PER_PAGE;
+    const to = from + ITEMS_PER_PAGE - 1;
+
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (!error) {
+      results = (data ?? []) as Property[];
+      totalCount = count ?? 0;
+    }
+  }
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
+
+  function buildUrl(overrides: Record<string, string>) {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    if (typeFilter) p.set("type", typeFilter);
+    if (minPrice) p.set("minPrice", String(minPrice));
+    if (maxPrice) p.set("maxPrice", String(maxPrice));
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v) p.set(k, v);
+      else p.delete(k);
+    }
+    const qs = p.toString();
+    return `/search${qs ? `?${qs}` : ""}`;
   }
 
   const typeEmoji: Record<string, string> = {
@@ -53,31 +114,72 @@ export default async function SearchPage({ searchParams }: Props) {
           <ArrowLeft size={14} /> Home
         </Link>
 
-        {/* Search Form */}
-        <form action="/search" method="GET" className="flex gap-2">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              name="q"
-              defaultValue={q ?? ""}
-              placeholder="Search by city, locality, project name, or property type..."
-              className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring transition-shadow"
-            />
+        {/* Search Form with Filters */}
+        <form action="/search" method="GET" className="space-y-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                name="q"
+                defaultValue={q ?? ""}
+                placeholder="Search by city, locality, project name, or property type..."
+                className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring transition-shadow"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors"
+            >
+              Search
+            </button>
           </div>
-          <button
-            type="submit"
-            className="px-5 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors"
-          >
-            Search
-          </button>
+
+          {/* Inline Filters */}
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              name="type"
+              defaultValue={typeFilter}
+              className="bg-muted/50 border border-border rounded-lg px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring"
+            >
+              {PROPERTY_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+            <input
+              name="minPrice"
+              type="number"
+              defaultValue={minPrice ?? ""}
+              placeholder="Min ₹"
+              className="w-28 bg-muted/50 border border-border rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring"
+            />
+            <input
+              name="maxPrice"
+              type="number"
+              defaultValue={maxPrice ?? ""}
+              placeholder="Max ₹"
+              className="w-28 bg-muted/50 border border-border rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring"
+            />
+            {hasFilters && (
+              <Link
+                href="/search"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear
+              </Link>
+            )}
+          </div>
         </form>
 
         {/* Results info */}
-        {q && (
+        {hasFilters && (
           <p className="text-sm text-muted-foreground">
-            {results.length} result{results.length !== 1 && "s"} for{" "}
-            <span className="font-medium text-foreground">&quot;{q}&quot;</span>
+            {totalCount} result{totalCount !== 1 && "s"}
+            {q ? (
+              <> for <span className="font-medium text-foreground">&quot;{q}&quot;</span></>
+            ) : null}
           </p>
         )}
 
@@ -135,10 +237,53 @@ export default async function SearchPage({ searchParams }: Props) {
               Browse all properties
             </Link>
           </div>
+        ) : !hasFilters ? (
+          <div className="flex flex-col items-center justify-center py-16 space-y-3">
+            <Search size={40} className="text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">Enter a search query or apply filters to find properties.</p>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 space-y-3">
             <Search size={40} className="text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">Enter a search query to find properties.</p>
+            <p className="text-sm text-muted-foreground">No properties match these filters.</p>
+            <Link href="/search" className="text-sm text-primary hover:underline">
+              Clear filters
+            </Link>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-4">
+            {page > 1 ? (
+              <Link
+                href={buildUrl({ page: String(page - 1) })}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                <ChevronLeft size={14} /> Prev
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-muted-foreground bg-muted/50 border border-border rounded-lg cursor-not-allowed">
+                <ChevronLeft size={14} /> Prev
+              </span>
+            )}
+
+            <span className="text-sm text-muted-foreground px-2">
+              Page {page} of {totalPages}
+            </span>
+
+            {page < totalPages ? (
+              <Link
+                href={buildUrl({ page: String(page + 1) })}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                Next <ChevronRight size={14} />
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-muted-foreground bg-muted/50 border border-border rounded-lg cursor-not-allowed">
+                Next <ChevronRight size={14} />
+              </span>
+            )}
           </div>
         )}
       </div>

@@ -329,7 +329,7 @@ export const analyzePropertyOffers = tool({
       const { data: offers } = await supabaseAdmin
         .from("offers")
         .select(
-          "id, offer_amount, status, message, created_at, buyer_id"
+          "id, offer_price, status, created_at, buyer_id"
         )
         .eq("property_id", property_id)
         .order("created_at", { ascending: false });
@@ -350,13 +350,12 @@ export const analyzePropertyOffers = tool({
         asking_price: askingPrice,
         total_offers: offers.length,
         offers: offers.map((o) => ({
-          offer_amount: o.offer_amount,
+          offer_price: o.offer_price,
           status: o.status,
           vs_asking_pct: askingPrice
-            ? Math.round(((Number(o.offer_amount) - Number(askingPrice)) / Number(askingPrice)) * 100)
+            ? Math.round(((Number(o.offer_price) - Number(askingPrice)) / Number(askingPrice)) * 100)
             : null,
           created_at: o.created_at,
-          message: o.message,
         })),
       };
     }
@@ -366,7 +365,7 @@ export const analyzePropertyOffers = tool({
       if (role === "buyer" || role === "both") {
         const { data } = await supabaseAdmin
           .from("offers")
-          .select("id, offer_amount, status, created_at, property_id")
+          .select("id, offer_price, status, created_at, property_id")
           .eq("buyer_id", user_id)
           .order("created_at", { ascending: false })
           .limit(10);
@@ -382,7 +381,7 @@ export const analyzePropertyOffers = tool({
         if (ownedIds.length > 0) {
           const { data } = await supabaseAdmin
             .from("offers")
-            .select("id, offer_amount, status, created_at, property_id")
+            .select("id, offer_price, status, created_at, property_id")
             .in("property_id", ownedIds)
             .order("created_at", { ascending: false })
             .limit(10);
@@ -414,7 +413,7 @@ export const getPortfolioSummary = tool({
     // Offers made by user
     const { data: offersMade } = await supabaseAdmin
       .from("offers")
-      .select("id, offer_amount, status, property_id")
+      .select("id, offer_price, status, property_id")
       .eq("buyer_id", user_id);
 
     // Offers received on user's properties
@@ -423,7 +422,7 @@ export const getPortfolioSummary = tool({
     if (propertyIds.length > 0) {
       const { data } = await supabaseAdmin
         .from("offers")
-        .select("id, offer_amount, status, property_id")
+        .select("id, offer_price, status, property_id")
         .in("property_id", propertyIds);
       offersReceived = data ?? [];
     }
