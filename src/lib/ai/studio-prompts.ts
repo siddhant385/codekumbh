@@ -75,16 +75,8 @@ export function buildStudioPrompt(
 }
 
 /**
- * Picks the best Replicate model for a given tool.
- * img2img for stage/organise/enhance, inpainting-style for objects.
+ * Returns the Replicate model identifier for AI Studio.
  */
-export function getReplicateModel(_tool: StudioTool | string): {
-  model: string;
-  version: string;
-} {
-  // stability-ai/sdxl works great for all tools via img2img
-  return {
-    model: "stability-ai/sdxl",
-    version: "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
-  };
+export function getReplicateModel(): `${string}/${string}` {
+  return "black-forest-labs/flux-2-pro";
 }

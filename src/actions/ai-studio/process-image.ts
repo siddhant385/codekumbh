@@ -1,7 +1,8 @@
 "use server";
 
+import Replicate from "replicate";
 import type { StudioTool } from "@/components/ai-studio/types";
-import { buildStudioPrompt } from "@/lib/ai/studio-prompts";
+import { buildStudioPrompt, getReplicateModel } from "@/lib/ai/studio-prompts";
 
 /* ── Server Action — instant AI preview via Replicate ──────────────────── */
 
@@ -16,8 +17,7 @@ export async function processImageWithAI(input: {
   | { success: true; outputBase64: string }
   | { success: false; error: string }
 > {
-  const apiToken = process.env.REPLICATE_API_TOKEN;
-  if (!apiToken) {
+  if (!process.env.REPLICATE_API_TOKEN) {
     return {
       success: false,
       error: "REPLICATE_API_TOKEN not set — add it to .env.local",
@@ -31,47 +31,24 @@ export async function processImageWithAI(input: {
   });
 
   try {
-    // Replicate sync mode (Prefer: wait) — returns result in one call
-    const res = await fetch("https://api.replicate.com/v1/predictions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-        Prefer: "wait",
+    const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
+
+    const output = await replicate.run(getReplicateModel(), {
+      input: {
+        prompt,
+        guidance:       guidanceScale,
+        steps:          30,
+        width:          1024,
+        height:         1024,
+        image_prompt:   input.imageBase64,
       },
-      body: JSON.stringify({
-        version: "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
-        input: {
-          image: input.imageBase64,
-          prompt,
-          guidance_scale: guidanceScale,
-          prompt_strength: input.tool === "enhance" ? 0.3 : 0.55,
-          num_inference_steps: 30,
-          width: 1024,
-          height: 1024,
-        },
-      }),
     });
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      return {
-        success: false,
-        error: `Replicate ${res.status}: ${text.slice(0, 300)}`,
-      };
-    }
+    // flux-2-pro returns a URL string or array of URL strings
+    const outputUrl = Array.isArray(output) ? output[0] : output;
 
-    const data = await res.json();
-
-    // Replicate returns output as an array of URLs or a single URL
-    const outputUrl =
-      Array.isArray(data.output) ? data.output[0] : data.output;
-
-    if (!outputUrl) {
-      return {
-        success: false,
-        error: data.error ?? "No output returned from Replicate",
-      };
+    if (!outputUrl || typeof outputUrl !== "string") {
+      return { success: false, error: "No output returned from Replicate" };
     }
 
     // Fetch the output image and convert to base64 for the client
@@ -83,13 +60,8 @@ export async function processImageWithAI(input: {
       };
     }
 
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-    const b64 = imgBuffer.toString("base64");
-
-    return {
-      success: true,
-      outputBase64: `data:image/png;base64,${b64}`,
-    };
+    const b64 = Buffer.from(await imgRes.arrayBuffer()).toString("base64");
+    return { success: true, outputBase64: `data:image/png;base64,${b64}` };
   } catch (err) {
     return { success: false, error: String(err) };
   }

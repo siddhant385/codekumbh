@@ -1,6 +1,7 @@
 import { logger, task } from "@trigger.dev/sdk/v3";
+import Replicate from "replicate";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { buildStudioPrompt } from "@/lib/ai/studio-prompts";
+import { buildStudioPrompt, getReplicateModel } from "@/lib/ai/studio-prompts";
 
 /* ── Task ───────────────────────────────────────────────────────────────── */
 
@@ -22,49 +23,33 @@ export const processStudioImage = task({
     logger.log("Starting AI Studio image processing", { propertyImageId, tool, preset });
 
     // ── 1. Validate API token ──────────────────────────────────────────
-    const apiToken = process.env.REPLICATE_API_TOKEN;
-    if (!apiToken) {
+    if (!process.env.REPLICATE_API_TOKEN) {
       logger.error("REPLICATE_API_TOKEN not set");
       return { success: false, error: "REPLICATE_API_TOKEN not configured" };
     }
 
-    // ── 2. Call Replicate API ──────────────────────────────────────────
+    // ── 2. Call Replicate API via SDK ──────────────────────────────────
     const { prompt, guidanceScale } = buildStudioPrompt(tool, { preset, removeText, replaceText });
-    logger.log("Sending to Replicate", { prompt: prompt.slice(0, 80) });
+    logger.log("Sending to Replicate", { model: getReplicateModel(), prompt: prompt.slice(0, 80) });
 
-    const res = await fetch("https://api.replicate.com/v1/predictions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-        Prefer: "wait",
+    const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
+
+    const replicateOutput = await replicate.run(getReplicateModel(), {
+      input: {
+        prompt,
+        guidance:     guidanceScale,
+        steps:        30,
+        width:        1024,
+        height:       1024,
+        image_prompt: imageBase64,
       },
-      body: JSON.stringify({
-        version: "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
-        input: {
-          image: imageBase64,
-          prompt,
-          guidance_scale: guidanceScale,
-          prompt_strength: tool === "enhance" ? 0.3 : 0.55,
-          num_inference_steps: 30,
-          width: 1024,
-          height: 1024,
-        },
-      }),
     });
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      logger.error("Replicate error", { status: res.status, body: text.slice(0, 300) });
-      return { success: false, error: `Replicate ${res.status}: ${text.slice(0, 300)}` };
-    }
+    const outputUrl = Array.isArray(replicateOutput) ? replicateOutput[0] : replicateOutput;
 
-    const data = await res.json();
-    const outputUrl = Array.isArray(data.output) ? data.output[0] : data.output;
-
-    if (!outputUrl) {
-      logger.error("No output from Replicate", data);
-      return { success: false, error: data.error ?? "No output returned" };
+    if (!outputUrl || typeof outputUrl !== "string") {
+      logger.error("No output from Replicate", { replicateOutput });
+      return { success: false, error: "No output returned from Replicate" };
     }
 
     logger.log("Replicate success — uploading to Supabase Storage");
