@@ -42,7 +42,7 @@ async function toBase64(url: string): Promise<string> {
   });
 }
 
-export function AIStudio({ photo, onClose, onApply }: AIStudioProps) {
+export function AIStudio({ photo, propertyImageId, onClose, onApply }: AIStudioProps) {
   /* ── AI Mode (persisted) ──────────────────────────────────────────────── */
   const [aiMode, setAiMode] = useState<"demo" | "live">("demo");
   useEffect(() => {
@@ -113,7 +113,7 @@ export function AIStudio({ photo, onClose, onApply }: AIStudioProps) {
         setLiveStatus("Converting image…");
         const base64 = await toBase64(photo.url);
 
-        setLiveStatus("Sending to Stability AI…");
+        setLiveStatus("Sending to Replicate AI…");
         const result = await processImageWithAI({
           imageBase64: base64,
           tool,
@@ -133,6 +133,21 @@ export function AIStudio({ photo, onClose, onApply }: AIStudioProps) {
         setDone(true);
         setProcessing(false);
         onApply(photo.id, tool, preset ?? layoutPreset ?? enhancePreset ?? undefined, result.outputBase64);
+
+        // Fire background persistence if this image has a DB row
+        if (propertyImageId) {
+          triggerStudioProcessing({
+            propertyImageId,
+            imageBase64: base64,
+            tool,
+            preset:      preset ?? layoutPreset ?? enhancePreset ?? undefined,
+            removeText:  replaceText.trim()     || undefined,
+            replaceText: replaceWithText.trim() || undefined,
+          }).then(res => {
+            if ("error" in res) toast.error(`Save failed: ${res.error}`);
+            else toast.success("AI image saved to gallery");
+          });
+        }
       } catch (err) {
         toast.error(`Failed: ${String(err)}`);
         setProcessing(false);
@@ -157,7 +172,7 @@ export function AIStudio({ photo, onClose, onApply }: AIStudioProps) {
     setEnhancePreset(null);
   }
 
-  const steps = aiMode === "live" ? LIVE_STEPS[tool] : MOCK_STEPS[tool];
+  const steps = MOCK_STEPS[tool];
 
   /* ── JSX ──────────────────────────────────────────────────────────────── */
   return (
@@ -265,7 +280,7 @@ export function AIStudio({ photo, onClose, onApply }: AIStudioProps) {
                   {aiMode === "live" ? (
                     <>
                       <p className="text-sm font-semibold text-white">{liveStatus || "Connecting…"}</p>
-                      <p className="text-[11px] text-white/50">Stability AI — this may take 10–30 seconds</p>
+                      <p className="text-[11px] text-white/50">Replicate AI — this may take 10–30 seconds</p>
                     </>
                   ) : (
                     <>
@@ -317,7 +332,7 @@ export function AIStudio({ photo, onClose, onApply }: AIStudioProps) {
               <div className="bg-violet-600/10 border-b border-violet-500/20 px-3 py-2 flex items-center gap-2">
                 <Wifi size={11} className="text-violet-500 shrink-0" />
                 <p className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">
-                  Live AI enabled — real results via Stability AI
+                  Live AI enabled — real results via Replicate
                 </p>
               </div>
             )}

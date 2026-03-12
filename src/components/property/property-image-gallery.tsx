@@ -26,6 +26,16 @@ export function PropertyImageGallery({ images, propertyTitle, propertyType }: Pr
   const coverImage = images.find(img => img.is_cover) ?? images[0] ?? null;
   const thumbs     = images.filter(img => img.id !== coverImage?.id);
 
+  /** Resolve best URL: session AI output > DB ai_processed_url > original */
+  function displayUrl(img: PropertyImage): string {
+    return applied[img.id]?.outputUrl ?? img.ai_processed_url ?? img.image_url;
+  }
+
+  /** Check if image has AI enhancement (session or persisted) */
+  function isAiEnhanced(img: PropertyImage): boolean {
+    return !!(applied[img.id] || img.ai_processed_url);
+  }
+
   /* Build StudioPhoto from a PropertyImage */
   function toStudioPhoto(img: PropertyImage): StudioPhoto {
     return {
@@ -63,6 +73,7 @@ export function PropertyImageGallery({ images, propertyTitle, propertyType }: Pr
       {studioPhoto && (
         <AIStudio
           photo={studioPhoto}
+          propertyImageId={studioId ?? undefined}
           onClose={() => setStudioId(null)}
           onApply={handleApply}
         />
@@ -72,7 +83,7 @@ export function PropertyImageGallery({ images, propertyTitle, propertyType }: Pr
       {coverImage && (
         <div className="group relative h-56 sm:h-72 rounded-xl overflow-hidden border border-border">
           <Image
-            src={coverImage.image_url} alt={propertyTitle} fill
+            src={displayUrl(coverImage)} alt={propertyTitle} fill
             className="object-cover" sizes="(max-width: 1024px) 100vw, 66vw" priority
           />
           {/* Overlay */}
@@ -87,7 +98,7 @@ export function PropertyImageGallery({ images, propertyTitle, propertyType }: Pr
           </button>
 
           {/* AI applied badge */}
-          {applied[coverImage.id] && (
+          {isAiEnhanced(coverImage) && (
             <div className="absolute top-2 left-2 flex items-center gap-0.5 bg-violet-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
               <Wand2 size={8} /> AI Enhanced
             </div>
@@ -114,7 +125,7 @@ export function PropertyImageGallery({ images, propertyTitle, propertyType }: Pr
               )}
               onClick={() => setActiveId(activeId === img.id ? null : img.id)}
             >
-              <Image src={img.image_url} alt="" fill
+              <Image src={displayUrl(img)} alt="" fill
                 className="object-cover" sizes="160px" unoptimized />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                 <button
@@ -124,7 +135,7 @@ export function PropertyImageGallery({ images, propertyTitle, propertyType }: Pr
                   <Wand2 size={9} /> Studio
                 </button>
               </div>
-              {applied[img.id] && (
+              {isAiEnhanced(img) && (
                 <div className="absolute top-1 left-1 w-3.5 h-3.5 rounded-full bg-violet-600/90 flex items-center justify-center">
                   <Wand2 size={7} className="text-white" />
                 </div>
@@ -142,7 +153,7 @@ export function PropertyImageGallery({ images, propertyTitle, propertyType }: Pr
       {/* Expanded view of selected thumbnail */}
       {viewingImg && (
         <div className="group relative h-48 sm:h-64 rounded-xl overflow-hidden border border-primary/40">
-          <Image src={viewingImg.image_url} alt="" fill
+          <Image src={displayUrl(viewingImg)} alt="" fill
             className="object-cover" sizes="(max-width: 1024px) 100vw, 66vw" />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-all" />
           <button
@@ -151,7 +162,7 @@ export function PropertyImageGallery({ images, propertyTitle, propertyType }: Pr
           >
             <Wand2 size={12} /> Open AI Studio
           </button>
-          {applied[viewingImg.id] && (
+          {isAiEnhanced(viewingImg) && (
             <div className="absolute top-2 left-2 flex items-center gap-0.5 bg-violet-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
               <Wand2 size={8} /> AI Enhanced
             </div>

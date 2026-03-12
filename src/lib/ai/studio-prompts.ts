@@ -78,7 +78,7 @@ export function buildStudioPrompt(
  * Picks the best Replicate model for a given tool.
  * img2img for stage/organise/enhance, inpainting-style for objects.
  */
-export function getReplicateModel(tool: StudioTool | string): {
+export function getReplicateModel(_tool: StudioTool | string): {
   model: string;
   version: string;
 } {
