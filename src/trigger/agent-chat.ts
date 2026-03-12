@@ -1,5 +1,5 @@
 import { logger, task } from "@trigger.dev/sdk/v3";
-import { runAgentWithTools } from "@/lib/ai/config";
+import { runChatAgentWithTools } from "@/lib/ai/config";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   agentTools,
@@ -141,8 +141,8 @@ export const processAgentChat = task({
     const fullPrompt = `${contextBlock}${userContext}User: ${message}`;
 
     try {
-      // 3. Run AI agent with tools (the actual heavy lifting)
-      const result = await runAgentWithTools(fullPrompt, systemPrompt, tools, {
+      // 3. Run AI chat agent with tools (uses Groq for fast interactive chat)
+      const result = await runChatAgentWithTools(fullPrompt, systemPrompt, tools, {
         maxSteps: 6,
       });
 
@@ -153,6 +153,8 @@ export const processAgentChat = task({
         taskId,
         toolsUsed,
         steps: result.steps,
+        provider: result.provider,
+        model: result.modelName,
         latencyMs,
       });
 
@@ -171,8 +173,8 @@ export const processAgentChat = task({
       await supabaseAdmin.from("ai_agent_logs").insert({
         user_id: userId,
         action_type: `agent_chat_${agentId}`,
-        model_provider: "google",
-        model_name: "gemini-2.5-flash",
+        model_provider: result.provider,
+        model_name: result.modelName,
         input_payload: { agentId, message, historyLength: recentHistory.length },
         output_payload: {
           response: result.text.slice(0, 500),

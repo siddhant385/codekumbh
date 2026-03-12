@@ -300,6 +300,39 @@ export async function respondToOffer(
 }
 
 // ---------------------------------------------------------------------------
+// 6c. UPDATE PROPERTY STATUS
+// ---------------------------------------------------------------------------
+
+export async function updatePropertyStatus(
+  propertyId: string,
+  status: "draft" | "active" | "sold" | "rented"
+): Promise<{ success: true } | { error: string }> {
+  const { supabase, userId } = await getAuthenticatedUser();
+  if (!supabase || !userId) return { error: "UNAUTHORIZED" };
+
+  // Verify ownership
+  const { data: property } = await supabase
+    .from("properties")
+    .select("owner_id")
+    .eq("id", propertyId)
+    .single();
+  if (!property || property.owner_id !== userId)
+    return { error: "You don't own this property." };
+
+  const { error: updateErr } = await supabase
+    .from("properties")
+    .update({
+      status,
+      is_active: status === "active",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", propertyId);
+
+  if (updateErr) return { error: updateErr.message };
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
 // 7. REQUEST AI VALUATION
 // ---------------------------------------------------------------------------
 

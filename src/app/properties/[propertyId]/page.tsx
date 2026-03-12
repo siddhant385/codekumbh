@@ -20,6 +20,7 @@ import { PropertyContextCard } from "@/components/property/property-context-card
 import { InvestmentInsightsCard } from "@/components/property/investment-insights-card";
 import { PropertyImageUpload } from "@/components/property/property-image-upload";
 import { OfferActions } from "@/components/property/offer-actions";
+import { PropertyStatusManager } from "@/components/property/property-status-manager";
 import { RealtimeValuationListener, RealtimeOfferListener, RealtimeContextListener, RealtimeInsightsListener } from "@/components/property/realtime-listeners";
 import type { Property, PropertyImage } from "@/lib/schema/property.schema";
 import type { Offer, Valuation } from "@/lib/schema/property.schema";
@@ -317,10 +318,14 @@ export default async function PropertyDetailPage({ params }: Props) {
               )}
 
               {isOwner && (
-                <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
-                  <Home size={13} className="inline mr-1" />
-                  This is your property listing. Offers will appear above.
-                </div>
+                <>
+                  <div className="border-t border-border my-4" />
+                  <PropertyStatusManager propertyId={p.id} currentStatus={p.status ?? "draft"} />
+                  <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground mt-4">
+                    <Home size={13} className="inline mr-1" />
+                    This is your property listing. Offers will appear above.
+                  </div>
+                </>
               )}
             </div>
           </div>

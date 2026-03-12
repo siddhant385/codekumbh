@@ -8,7 +8,10 @@ import {
   CheckCircle2,
   XCircle,
   Building2,
+  User,
+  Phone,
 } from "lucide-react";
+import { OfferActions } from "@/components/property/offer-actions";
 import type { Offer, Property } from "@/lib/schema/property.schema";
 
 export default async function ReceivedOffersPage() {
@@ -26,21 +29,23 @@ export default async function ReceivedOffersPage() {
   const properties = (myProperties ?? []) as Property[];
   const propertyIds = properties.map((p) => p.id);
 
-  // Get all offers on my properties
-  let offers: (Offer & { property_title: string; property_type: string | null })[] = [];
+  // Get all offers on my properties (with buyer profile)
+  let offers: (Offer & { property_title: string; property_type: string | null; buyer_name?: string; buyer_phone?: string })[] = [];
   if (propertyIds.length > 0) {
     const { data } = await supabase
       .from("offers")
-      .select("*")
+      .select("*, profiles:buyer_id(full_name, phone)")
       .in("property_id", propertyIds)
       .order("created_at", { ascending: false });
 
-    offers = ((data ?? []) as Offer[]).map((o) => {
+    offers = ((data ?? []) as Array<Offer & { profiles: { full_name: string | null; phone: string | null } | null }>).map((o) => {
       const prop = properties.find((p) => p.id === o.property_id);
       return {
         ...o,
         property_title: prop?.title ?? "Unknown",
         property_type: prop?.property_type ?? null,
+        buyer_name: o.profiles?.full_name ?? undefined,
+        buyer_phone: o.profiles?.phone ?? undefined,
       };
     });
   }
@@ -96,49 +101,65 @@ export default async function ReceivedOffersPage() {
   );
 }
 
-function OfferList({ offers }: { offers: (Offer & { property_title: string; property_type: string | null })[] }) {
+function OfferList({ offers }: { offers: (Offer & { property_title: string; property_type: string | null; buyer_name?: string; buyer_phone?: string })[] }) {
   return (
     <div className="space-y-3">
       {offers.map((o) => (
-        <Link
+        <div
           key={o.id}
-          href={`/properties/${o.property_id}`}
-          className="flex items-center gap-4 bg-card rounded-xl border border-border p-4 hover:shadow-md transition-shadow"
+          className="bg-card rounded-xl border border-border p-4 space-y-3"
         >
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-accent flex items-center justify-center flex-shrink-0">
-            <span className="text-lg">
-              {o.property_type === "apartment" ? "🏢" : o.property_type === "villa" ? "🏡" : o.property_type === "plot" ? "🌳" : o.property_type === "commercial" ? "🏪" : "🏠"}
-            </span>
+          {/* Top row: property info + price */}
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/properties/${o.property_id}`}
+              className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-accent flex items-center justify-center flex-shrink-0 hover:ring-2 ring-primary/20 transition-all"
+            >
+              <span className="text-lg">
+                {o.property_type === "apartment" ? "🏢" : o.property_type === "villa" ? "🏡" : o.property_type === "plot" ? "🌳" : o.property_type === "commercial" ? "🏪" : "🏠"}
+              </span>
+            </Link>
+            <div className="flex-1 min-w-0">
+              <Link href={`/properties/${o.property_id}`} className="text-sm font-semibold text-foreground truncate block hover:text-primary transition-colors">
+                {o.property_title}
+              </Link>
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                <Clock size={11} /> {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                {o.buyer_name && (
+                  <span className="ml-1 flex items-center gap-1">
+                    · <User size={10} /> {o.buyer_name}
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-sm font-bold text-foreground flex items-center justify-end gap-0.5">
+                <IndianRupee size={12} />
+                {Number(o.offer_price).toLocaleString("en-IN")}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">{o.property_title}</p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-              <Clock size={11} /> {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-            </p>
+
+          {/* Bottom row: accept/reject buttons */}
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            {o.buyer_phone && (
+              <a
+                href={`tel:${o.buyer_phone}`}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+              >
+                <Phone size={11} /> {o.buyer_phone}
+              </a>
+            )}
+            {!o.buyer_phone && <div />}
+            <OfferActions
+              offerId={o.id}
+              status={o.status}
+              buyerName={o.buyer_name}
+              buyerPhone={o.buyer_phone}
+            />
           </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-sm font-bold text-foreground flex items-center justify-end gap-0.5">
-              <IndianRupee size={12} />
-              {Number(o.offer_price).toLocaleString("en-IN")}
-            </p>
-            <StatusBadge status={o.status} />
-          </div>
-        </Link>
+        </div>
       ))}
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const cfg: Record<string, { icon: React.ReactNode; cls: string }> = {
-    pending: { icon: <Clock size={10} />, cls: "bg-amber-100 text-amber-700" },
-    accepted: { icon: <CheckCircle2 size={10} />, cls: "bg-green-100 text-green-700" },
-    rejected: { icon: <XCircle size={10} />, cls: "bg-red-100 text-red-700" },
-  };
-  const c = cfg[status] ?? cfg.pending;
-  return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full capitalize mt-1 ${c.cls}`}>
-      {c.icon} {status}
-    </span>
   );
 }

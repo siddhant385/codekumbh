@@ -11,6 +11,9 @@ importers:
       '@ai-sdk/google':
         specifier: ^3.0.31
         version: 3.0.31(zod@4.3.6)
+      '@ai-sdk/groq':
+        specifier: ^3.0.25
+        version: 3.0.25(zod@4.3.6)
       '@supabase/ssr':
         specifier: ^0.8.0
         version: 0.8.0(@supabase/supabase-js@2.97.0)
@@ -113,6 +116,12 @@ packages:
 
   '@ai-sdk/google@3.0.31':
     resolution: {integrity: sha512-RVNz8WFSIRbXbYDBE6JvlE2escWPJimBCs22LzKEYH7DNfl/X7cHNa1LFho4PsY6Ib0JmbzB8s2+i0wHs/wNCg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/groq@3.0.25':
+    resolution: {integrity: sha512-qRGe8R+iRNsTP9gyBJWYfYgWDs7jHdOb4QTKeyz+isVr5SBI5KDpbIr7GA51Mb8vlmXCQQk4+9LgzMYwSSstYg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -4669,6 +4678,12 @@ snapshots:
       zod: 4.3.6
 
   '@ai-sdk/google@3.0.31(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.8
+      '@ai-sdk/provider-utils': 4.0.15(zod@4.3.6)
+      zod: 4.3.6
+
+  '@ai-sdk/groq@3.0.25(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@ai-sdk/provider-utils': 4.0.15(zod@4.3.6)
