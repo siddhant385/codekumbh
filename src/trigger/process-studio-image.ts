@@ -1,7 +1,5 @@
 import { logger, task } from "@trigger.dev/sdk/v3";
 import Replicate from "replicate";
-import { generateImage } from "ai";
-import { fal } from "@ai-sdk/fal";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { buildStudioPrompt, getReplicateModel } from "@/lib/ai/studio-prompts";
 
@@ -31,16 +29,35 @@ async function callReplicate(prompt: string, imageBase64: string): Promise<Buffe
   return Buffer.from(await res.arrayBuffer());
 }
 
-/** fal.ai: flux-pro/kontext/max image editing. Returns raw bytes. */
+/** fal.ai: flux-pro/kontext/max image editing via direct REST API. Returns raw bytes. */
 async function callFal(prompt: string, imageBase64: string): Promise<Buffer> {
-  if (!process.env.FAL_API_KEY && !process.env.FAL_KEY) throw new Error("FAL_API_KEY not set");
+  const apiKey = process.env.FAL_API_KEY || process.env.FAL_KEY;
+  if (!apiKey) throw new Error("FAL_API_KEY not set");
 
-  const { image } = await generateImage({
-    model: fal.image("fal-ai/flux-pro/kontext/max"),
-    prompt: { images: [imageBase64], text: prompt },
+  const res = await fetch("https://fal.run/fal-ai/flux-pro/kontext/max", {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      prompt,
+      image_url: imageBase64,
+    }),
   });
 
-  return Buffer.from(image.uint8Array);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`fal.ai ${res.status}: ${body}`);
+  }
+
+  const json = await res.json();
+  const url = json.images?.[0]?.url;
+  if (typeof url !== "string") throw new Error("fal.ai returned no image URL");
+
+  const imgRes = await fetch(url);
+  if (!imgRes.ok) throw new Error(`fal.ai download failed: ${imgRes.status}`);
+  return Buffer.from(await imgRes.arrayBuffer());
 }
 
 function isRateLimit(err: unknown): boolean {
