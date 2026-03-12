@@ -20,11 +20,15 @@ import {
   Percent,
   Sparkles,
   ShieldCheck,
+  Calendar,
+  Layers,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardRealtimeListener } from "@/components/dashboard/realtime-listener";
 import type { Property } from "@/lib/schema/property.schema";
 import type { Offer } from "@/lib/schema/property.schema";
+import { FadeIn } from "@/components/fade-in";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -111,392 +115,389 @@ export default async function DashboardPage() {
   const displayName = user.email?.split("@")[0] ?? "there";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative flex flex-col min-h-screen selection:bg-indigo-500/30">
       <DashboardRealtimeListener myPropertyIds={propertyIds} userId={user.id} />
 
-      {/* Page header */}
-      <div className="border-b border-border bg-card">
-        <div className="max-w-6xl mx-auto px-4 py-5 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">
-              Hello, <span className="capitalize">{displayName}</span> 👋
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {activeListings} active listing{activeListings !== 1 ? "s" : ""} · {pendingReceivedOffers} pending offer{pendingReceivedOffers !== 1 ? "s" : ""} to review
-            </p>
-          </div>
-          <Button asChild size="sm">
-            <Link href="/properties/new">
-              <Plus size={14} className="mr-1.5" /> List Property
-            </Link>
-          </Button>
-        </div>
+      {/* ── Fixed Background ── */}
+      <div 
+        className="fixed inset-0 z-[-1] bg-[url('https://images.unsplash.com/photo-1723796994732-b375f31ef231?w=1600&auto=format&fit=crop&q=80')] bg-cover bg-center bg-no-repeat"
+      >
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-[4px]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90" />
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-
-        {/* Pending actions alert strip */}
-        {(pendingReceivedOffers > 0 || incompleteListings.length > 0) && (
-          <div className="space-y-2">
-            {pendingReceivedOffers > 0 && (
-              <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl px-4 py-3">
-                <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
-                <p className="text-sm text-amber-800 dark:text-amber-300 flex-1">
-                  <strong>{pendingReceivedOffers} offer{pendingReceivedOffers !== 1 ? "s" : ""}</strong>{" "}
-                  {pendingReceivedOffers === 1 ? "is" : "are"} waiting for your response.
-                </p>
-                <Link
-                  href="/dashboard/offers"
-                  className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline shrink-0 flex items-center gap-1"
-                >
-                  Review <ArrowRight size={11} />
-                </Link>
+      <div className="flex-grow w-full pb-20 pt-24 sm:pt-28 z-10">
+        
+        {/* Page header */}
+        <FadeIn className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-2 text-indigo-400 font-semibold text-xs uppercase tracking-widest mb-3">
+                <Layers size={14} /> Personal Dashboard
               </div>
-            )}
-            {incompleteListings.length > 0 && (
-              <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-xl px-4 py-3">
-                <AlertCircle size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                <p className="text-sm text-blue-800 dark:text-blue-300 flex-1">
-                  <strong>{incompleteListings.length} listing{incompleteListings.length !== 1 ? "s" : ""}</strong>{" "}
-                  {incompleteListings.length === 1 ? "is" : "are"} missing description or GPS — complete them to rank higher.
-                </p>
-                <Link
-                  href="/properties"
-                  className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:underline shrink-0 flex items-center gap-1"
-                >
-                  Fix <ArrowRight size={11} />
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard
-            icon={<Building2 size={16} />}
-            iconBg="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
-            label="My Listings"
-            value={properties.length.toString()}
-            sub={`${activeListings} active`}
-          />
-          <StatCard
-            icon={<IndianRupee size={16} />}
-            iconBg="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400"
-            label="Listings Value"
-            value={`₹${formatCompact(totalPortfolioValue)}`}
-            sub="Total asking"
-          />
-          <StatCard
-            icon={<TrendingUp size={16} />}
-            iconBg="bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400"
-            label="Offers Received"
-            value={receivedOffers.length.toString()}
-            sub={`${pendingReceivedOffers} pending`}
-          />
-          <StatCard
-            icon={<BarChart3 size={16} />}
-            iconBg="bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
-            label="My Offers"
-            value={sentOffers.length.toString()}
-            sub={`${pendingSentOffers} pending`}
-          />
-        </div>
-
-        {/* Main content + sidebar */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* My Properties */}
-          <div className="lg:col-span-2 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">My Properties</h2>
-              <Link href="/properties" className="text-xs text-primary hover:underline flex items-center gap-1">
-                Browse All <ArrowRight size={11} />
-              </Link>
+              <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
+                Hello, <span className="capitalize text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60">{displayName}</span> 👋
+              </h1>
+              <p className="text-white/50 mt-2 text-sm md:text-base font-medium">
+                Manage your real estate assets and analyze market trends in one place.
+              </p>
             </div>
-
-            {properties.length === 0 ? (
-              <div className="bg-card rounded-xl border border-border p-8 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3 text-2xl">
-                  🏘️
-                </div>
-                <p className="text-sm font-medium text-foreground mb-1">No properties listed yet</p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  List your first property to reach thousands of buyers.
-                </p>
-                <Button asChild size="sm">
-                  <Link href="/properties/new">
-                    <Plus size={13} className="mr-1.5" /> List First Property
-                  </Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {properties.map((p) => {
-                  const offerCount = receivedOffers.filter((o) => o.property_id === p.id).length;
-                  const emoji =
-                    p.property_type === "apartment" ? "🏢"
-                    : p.property_type === "villa" ? "🏡"
-                    : p.property_type === "plot" ? "🌳"
-                    : p.property_type === "commercial" ? "🏪"
-                    : "🏠";
-                  return (
-                    <Link
-                      key={p.id}
-                      href={`/properties/${p.id}`}
-                      className="group flex items-center gap-3 bg-card rounded-xl border border-border p-4 hover:border-primary/30 hover:shadow-md transition-all duration-200"
-                    >
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30 flex items-center justify-center flex-shrink-0 text-xl">
-                        {emoji}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                          {p.title}
-                        </h3>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <MapPin size={10} /> {p.city}, {p.state}
-                        </p>
-                      </div>
-                      <div className="text-right flex-shrink-0 space-y-1.5">
-                        <p className="text-sm font-bold text-foreground flex items-center justify-end gap-0.5">
-                          <IndianRupee size={11} strokeWidth={2.5} />
-                          {p.asking_price ? formatCompact(Number(p.asking_price)) : "—"}
-                        </p>
-                        <div className="flex items-center gap-1.5 justify-end">
-                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${
-                            p.status === "active" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
-                            : p.status === "sold" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
-                            : "bg-muted text-muted-foreground"
-                          }`}>
-                            {p.status}
-                          </span>
-                          {offerCount > 0 && (
-                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
-                              {offerCount} offer{offerCount > 1 && "s"}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              <Button asChild size="lg" className="bg-white text-black hover:bg-slate-200 rounded-full font-bold px-8 transition-transform hover:scale-105 active:scale-95">
+                <Link href="/properties/new">
+                  <Plus size={18} className="mr-2" /> List Property
+                </Link>
+              </Button>
+            </div>
           </div>
+        </FadeIn>
 
-          {/* Sidebar */}
-          <div className="space-y-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
-            {/* Recent Received Offers */}
-            <div className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-foreground">Offers Received</h3>
-                {receivedOffers.length > 0 && (
-                  <Link href="/dashboard/offers" className="text-xs text-primary hover:underline">
-                    View All
+          {/* Pending actions alert strip */}
+          {(pendingReceivedOffers > 0 || incompleteListings.length > 0) && (
+            <FadeIn delay={0.1} className="space-y-3">
+              {pendingReceivedOffers > 0 && (
+                <div className="flex items-center gap-3 bg-indigo-500/10 backdrop-blur-md border border-indigo-500/30 rounded-[1.5rem] px-6 py-4">
+                  <AlertCircle size={20} className="text-indigo-400 shrink-0" />
+                  <p className="text-sm text-indigo-100 flex-1">
+                    <strong className="text-white">{pendingReceivedOffers} offer{pendingReceivedOffers !== 1 ? "s" : ""}</strong> waiting for your approval. Time to make a move!
+                  </p>
+                  <Link
+                    href="/dashboard/offers"
+                    className="text-xs font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest flex items-center gap-1 transition-colors"
+                  >
+                    Review <ArrowRight size={14} />
                   </Link>
-                )}
-              </div>
-              {receivedOffers.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No offers received yet.</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {receivedOffers.slice(0, 5).map((o) => (
-                    <div key={o.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">{o.property_title}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-0.5 mt-0.5">
-                          <IndianRupee size={9} /> {Number(o.offer_price).toLocaleString("en-IN")}
-                        </p>
-                      </div>
-                      <OfferStatusBadge status={o.status} />
-                    </div>
-                  ))}
                 </div>
               )}
-            </div>
-
-            {/* My Sent Offers */}
-            <div className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-foreground">Offers Sent</h3>
-                {sentOffers.length > 0 && (
-                  <Link href="/dashboard/my-offers" className="text-xs text-primary hover:underline">
-                    View All
+              {incompleteListings.length > 0 && (
+                <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-[1.5rem] px-6 py-4">
+                  <AlertCircle size={20} className="text-white/60 shrink-0" />
+                  <p className="text-sm text-white/80 flex-1">
+                    <strong className="text-white">{incompleteListings.length} listing{incompleteListings.length !== 1 ? "s" : ""}</strong> are missing details or GPS — optimizing them will boost visibility.
+                  </p>
+                  <Link
+                    href="/properties"
+                    className="text-xs font-bold text-white/60 hover:text-white uppercase tracking-widest flex items-center gap-1 transition-colors"
+                  >
+                    Fix <ArrowRight size={14} />
                   </Link>
-                )}
-              </div>
-              {sentOffers.length === 0 ? (
-                <p className="text-xs text-muted-foreground">You haven&apos;t made any offers yet.</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {sentOffers.slice(0, 5).map((o) => (
-                    <div key={o.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground flex items-center gap-0.5">
-                          <IndianRupee size={9} /> {Number(o.offer_price).toLocaleString("en-IN")}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {new Date(o.created_at).toLocaleDateString("en-IN")}
-                        </p>
-                      </div>
-                      <OfferStatusBadge status={o.status} />
-                    </div>
-                  ))}
                 </div>
               )}
-            </div>
+            </FadeIn>
+          )}
 
-            {/* Listing Health */}
-            <div className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-foreground">Listing Health</h3>
-                {acceptanceRate !== null && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 flex items-center gap-0.5">
-                    <Percent size={8} /> {acceptanceRate}% acceptance
-                  </span>
-                )}
+          {/* Stats grid */}
+          <FadeIn delay={0.2} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard
+              icon={<Building2 size={24} />}
+              label="My Listings"
+              value={properties.length.toString()}
+              sub={`${activeListings} active`}
+              color="indigo"
+            />
+            <StatCard
+              icon={<IndianRupee size={24} />}
+              label="Listings Value"
+              value={`₹${formatCompact(totalPortfolioValue)}`}
+              sub="Total asking"
+              color="emerald"
+            />
+            <StatCard
+              icon={<TrendingUp size={24} />}
+              label="Offers Received"
+              value={receivedOffers.length.toString()}
+              sub={`${pendingReceivedOffers} pending`}
+              color="amber"
+            />
+            <StatCard
+              icon={<BarChart3 size={24} />}
+              label="My Offers"
+              value={sentOffers.length.toString()}
+              sub={`${pendingSentOffers} pending`}
+              color="blue"
+            />
+          </FadeIn>
+
+          {/* Main content + sidebar */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            {/* My Properties */}
+            <FadeIn delay={0.3} className="lg:col-span-2 space-y-6">
+              <div className="flex items-center justify-between px-2">
+                <h2 className="text-xl font-bold text-white tracking-tight">Portfolio Overview</h2>
+                <Link href="/properties" className="text-sm font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition-colors">
+                  View full list <ArrowRight size={14} />
+                </Link>
               </div>
+
               {properties.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No listings yet.</p>
+                <div className="bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-16 text-center shadow-xl">
+                  <div className="w-20 h-20 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6 text-4xl shadow-inner">
+                    🏘️
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">No properties listed yet</h3>
+                  <p className="text-white/50 mb-8 max-w-sm mx-auto">
+                    Start your journey by listing your first property and reach a global audience of AI-vetted buyers.
+                  </p>
+                  <Button asChild size="lg" className="bg-white text-black hover:bg-slate-200 rounded-full font-bold px-10 transition-transform hover:scale-105 active:scale-95">
+                    <Link href="/properties/new">
+                      <Plus size={18} className="mr-2" /> List First Property
+                    </Link>
+                  </Button>
+                </div>
               ) : (
-                <div className="space-y-2">
-                  {properties.slice(0, 5).map((p) => {
-                    const hasDesc = !!p.description;
-                    const hasGps  = p.latitude !== null && p.longitude !== null;
-                    const score   = [hasDesc, hasGps].filter(Boolean).length;
+                <div className="grid grid-cols-1 gap-4">
+                  {properties.map((p) => {
+                    const offerCount = receivedOffers.filter((o) => o.property_id === p.id).length;
+                    const emoji =
+                      p.property_type === "apartment" ? "🏢"
+                      : p.property_type === "villa" ? "🏡"
+                      : p.property_type === "plot" ? "🌳"
+                      : p.property_type === "commercial" ? "🏪"
+                      : "🏠";
                     return (
-                      <Link key={p.id} href={`/properties/${p.id}`}
-                        className="flex items-center gap-2 hover:bg-muted/40 rounded-lg px-1.5 py-1 transition-colors">
+                      <Link
+                        key={p.id}
+                        href={`/properties/${p.id}`}
+                        className="group flex flex-col sm:flex-row sm:items-center gap-6 bg-white/5 backdrop-blur-md rounded-[2rem] border border-white/10 p-6 hover:bg-white/[0.08] hover:border-indigo-500/40 hover:shadow-[0_0_30px_rgba(99,102,241,0.15)] transition-all duration-300"
+                      >
+                        <div className="w-24 h-24 rounded-[1.5rem] bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-white/5 flex items-center justify-center flex-shrink-0 text-4xl shadow-inner group-hover:scale-110 transition-transform duration-500">
+                          {emoji}
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">{p.title}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className={`flex items-center gap-0.5 text-[10px] ${hasDesc ? "text-emerald-600" : "text-muted-foreground"}`}>
-                              <FileText size={9} /> {hasDesc ? "Desc" : "No desc"}
+                          <div className="flex items-center gap-2 mb-2">
+                             <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                              p.status === "active" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                              : p.status === "sold" ? "bg-blue-500/20 text-blue-400 border border-blue-500/20"
+                              : "bg-white/10 text-white/50 border border-white/10"
+                            }`}>
+                              {p.status}
                             </span>
-                            <span className={`flex items-center gap-0.5 text-[10px] ${hasGps ? "text-emerald-600" : "text-muted-foreground"}`}>
-                              {hasGps ? <MapPin size={9} /> : <MapPinOff size={9} />} {hasGps ? "GPS" : "No GPS"}
-                            </span>
+                            {offerCount > 0 && (
+                              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/20 uppercase tracking-wider">
+                                {offerCount} {offerCount === 1 ? 'OFFER' : 'OFFERS'}
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-xl font-bold text-white truncate group-hover:text-indigo-300 transition-colors mb-2 tracking-tight">
+                            {p.title}
+                          </h3>
+                          <div className="flex items-center gap-4 text-white/40 text-sm">
+                             <p className="flex items-center gap-1.5 truncate">
+                              <MapPin size={16} /> {p.city}, {p.state}
+                            </p>
+                            <p className="flex items-center gap-1.5">
+                              <Calendar size={16} /> {new Date(p.created_at).toLocaleDateString()}
+                            </p>
                           </div>
                         </div>
-                        <div className="shrink-0">
-                          {score === 2 ? (
-                            <CheckCircle2 size={14} className="text-emerald-500" />
-                          ) : (
-                            <span className="text-[10px] font-bold text-amber-600">{score}/2</span>
-                          )}
+                        <div className="sm:text-right flex-shrink-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-4 pt-4 sm:pt-0 border-t sm:border-t-0 border-white/5 mt-2 sm:mt-0">
+                          <div>
+                            <p className="text-xs text-white/40 uppercase font-bold tracking-widest mb-1">Price</p>
+                            <p className="text-2xl font-black text-white flex items-center sm:justify-end gap-1 font-mono">
+                              {p.asking_price ? formatCompact(Number(p.asking_price)) : "—"}
+                            </p>
+                          </div>
+                          <ArrowRight size={24} className="text-white/20 group-hover:text-white group-hover:translate-x-1 transition-all" />
                         </div>
                       </Link>
                     );
                   })}
                 </div>
               )}
-            </div>
+            </FadeIn>
 
-            {/* AI Market Insight */}
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 border-b border-border">
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
-                  <Sparkles size={12} className="text-white" />
+            {/* Sidebar */}
+            <FadeIn delay={0.4} className="space-y-8">
+
+              {/* AI Market Insight */}
+              <div className="bg-gradient-to-br from-indigo-950/40 via-slate-900/60 to-purple-950/20 backdrop-blur-xl rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
+                <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10">
+                  <div className="w-10 h-10 rounded-[1rem] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(99,102,241,0.4)]">
+                    <Sparkles size={18} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-base font-bold text-white tracking-tight">AI Insights</p>
+                    <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Powered by Gemini</p>
+                  </div>
+                  {aiInsight && (
+                    <div className="ml-auto flex items-center gap-1.5 bg-indigo-500/20 px-2.5 py-1 rounded-full border border-indigo-500/20">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                      <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">LIVE</span>
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm font-semibold text-foreground">AI Market Insight</p>
-                {aiInsight && (
-                  <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400">
-                    LIVE
-                  </span>
-                )}
-              </div>
-              <div className="p-4">
-                {!aiInsight ? (
-                  <p className="text-xs text-muted-foreground text-center py-3">
-                    AI insights will appear here after your first property listing is analysed.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {/* ROI + Risk row */}
-                    <div className="flex items-center gap-2">
-                      {aiInsight.projected_roi != null && (
-                        <div className="flex-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2.5 text-center">
-                          <p className="text-[10px] text-muted-foreground">Projected ROI</p>
-                          <p className="text-base font-bold text-emerald-700 dark:text-emerald-400">
-                            {aiInsight.projected_roi.toFixed(1)}%
-                          </p>
-                        </div>
-                      )}
+                <div className="p-6">
+                  {!aiInsight ? (
+                    <div className="text-center py-6">
+                      <div className="w-12 h-12 rounded-full bg-white/5 border border-white/5 flex items-center justify-center mx-auto mb-4">
+                        <BarChart3 size={20} className="text-white/20" />
+                      </div>
+                      <p className="text-sm font-medium text-white/50 leading-relaxed">
+                        AI insights will appear here after your first property listing is analysed.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* ROI + Risk row */}
+                      <div className="grid grid-cols-2 gap-3">
+                        {aiInsight.projected_roi != null && (
+                          <div className="bg-white/5 rounded-[1.5rem] p-4 border border-white/5 text-center">
+                            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mb-1">Projected ROI</p>
+                            <p className="text-2xl font-black text-emerald-400">
+                              {aiInsight.projected_roi.toFixed(1)}%
+                            </p>
+                          </div>
+                        )}
+                        {aiInsight.confidence_score != null && (
+                          <div className="bg-white/5 rounded-[1.5rem] p-4 border border-white/5 text-center">
+                            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mb-1">Confidence</p>
+                            <p className="text-2xl font-black text-white">
+                              {aiInsight.confidence_score <= 1
+                                ? Math.round(aiInsight.confidence_score * 100)
+                                : Math.round(aiInsight.confidence_score)}%
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
                       {aiInsight.risk_tolerance && (
-                        <div className={`flex-1 rounded-lg p-2.5 text-center ${
+                        <div className={`rounded-[1.5rem] p-4 flex items-center gap-4 border ${
                           aiInsight.risk_tolerance === "LOW"
-                            ? "bg-green-50 dark:bg-green-900/20"
+                            ? "bg-emerald-500/10 border-emerald-500/20"
                             : aiInsight.risk_tolerance === "HIGH"
-                            ? "bg-red-50 dark:bg-red-900/20"
-                            : "bg-amber-50 dark:bg-amber-900/20"
+                            ? "bg-red-500/10 border-red-500/20"
+                            : "bg-amber-500/10 border-amber-500/20"
                         }`}>
-                          <ShieldCheck size={12} className={`mx-auto mb-0.5 ${
-                            aiInsight.risk_tolerance === "LOW" ? "text-green-600" : aiInsight.risk_tolerance === "HIGH" ? "text-red-600" : "text-amber-600"
-                          }`} />
-                          <p className="text-[10px] text-muted-foreground">Risk Level</p>
-                          <p className={`text-xs font-bold capitalize ${
-                            aiInsight.risk_tolerance === "LOW" ? "text-green-700 dark:text-green-400" : aiInsight.risk_tolerance === "HIGH" ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"
+                          <div className={`p-2 rounded-xl scale-110 ${
+                            aiInsight.risk_tolerance === "LOW" ? "bg-emerald-500/20 text-emerald-400" : aiInsight.risk_tolerance === "HIGH" ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"
                           }`}>
-                            {aiInsight.risk_tolerance.charAt(0) + aiInsight.risk_tolerance.slice(1).toLowerCase()}
-                          </p>
+                            <ShieldCheck size={20} />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Risk Tolerance</p>
+                            <p className={`text-sm font-bold capitalize ${
+                              aiInsight.risk_tolerance === "LOW" ? "text-emerald-300" : aiInsight.risk_tolerance === "HIGH" ? "text-red-300" : "text-amber-300"
+                            }`}>
+                              {aiInsight.risk_tolerance.charAt(0) + aiInsight.risk_tolerance.slice(1).toLowerCase()} Profile
+                            </p>
+                          </div>
                         </div>
                       )}
-                      {aiInsight.confidence_score != null && (
-                        <div className="flex-1 bg-muted/50 rounded-lg p-2.5 text-center">
-                          <p className="text-[10px] text-muted-foreground">Confidence</p>
-                          <p className="text-base font-bold text-foreground">
-                            {aiInsight.confidence_score <= 1
-                              ? Math.round(aiInsight.confidence_score * 100)
-                              : Math.round(aiInsight.confidence_score)}%
+
+                      {/* Allocation strategy */}
+                      {aiInsight.allocation_strategy?.property_investment_pct != null && (
+                        <div className="bg-white/5 rounded-[1.5rem] p-6 border border-white/5">
+                          <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-4">
+                            Allocation Strategy
                           </p>
+                          <div className="space-y-4">
+                            {[
+                              { label: "Property", pct: aiInsight.allocation_strategy.property_investment_pct, color: "bg-indigo-500" },
+                              { label: "Reserve", pct: aiInsight.allocation_strategy.liquid_reserve_pct ?? 0, color: "bg-emerald-500" },
+                              { label: "Renovation", pct: aiInsight.allocation_strategy.renovation_budget_pct ?? 0, color: "bg-amber-500" },
+                            ].map((item) => (
+                              <div key={item.label} className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs font-semibold text-white/70">{item.label}</p>
+                                  <p className="text-xs font-black text-white">{item.pct}%</p>
+                                </div>
+                                <div className="h-1.5 rounded-full bg-white/5 overflow-hidden border border-white/5">
+                                  <div className={`h-full rounded-full ${item.color} shadow-[0_0_10px_rgba(0,0,0,0.5)]`} style={{ width: `${item.pct}%` }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
+                  )}
+                </div>
+              </div>
 
-                    {/* Risk analysis */}
-                    {aiInsight.risk_analysis && (
-                      <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">
-                        {aiInsight.risk_analysis}
-                      </p>
-                    )}
-
-                    {/* Allocation strategy */}
-                    {aiInsight.allocation_strategy?.property_investment_pct != null && (
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                          Suggested Allocation
-                        </p>
-                        {[
-                          { label: "Property", pct: aiInsight.allocation_strategy.property_investment_pct, color: "bg-indigo-500" },
-                          { label: "Liquid Reserve", pct: aiInsight.allocation_strategy.liquid_reserve_pct ?? 0, color: "bg-emerald-500" },
-                          { label: "Renovation", pct: aiInsight.allocation_strategy.renovation_budget_pct ?? 0, color: "bg-amber-500" },
-                        ].map((item) => (
-                          <div key={item.label} className="flex items-center gap-2">
-                            <p className="text-[10px] text-muted-foreground w-20 shrink-0">{item.label}</p>
-                            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
-                            </div>
-                            <p className="text-[10px] font-semibold text-foreground w-7 text-right">{item.pct}%</p>
-                          </div>
-                        ))}
-                      </div>
+              {/* Offers Summary Group */}
+              <div className="grid grid-cols-1 gap-6">
+                 {/* Recent Received Offers */}
+                <div className="bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-6 shadow-xl">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                       <TrendingUp size={18} className="text-amber-400" /> Received
+                    </h3>
+                    {receivedOffers.length > 5 && (
+                      <Link href="/dashboard/offers" className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-colors">
+                        View More
+                      </Link>
                     )}
                   </div>
-                )}
-              </div>
-            </div>
+                  {receivedOffers.length === 0 ? (
+                    <p className="text-xs font-medium text-white/30 text-center py-4 italic">No activity yet</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {receivedOffers.slice(0, 5).map((o) => (
+                        <div key={o.id} className="group flex items-center justify-between py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] -mx-2 px-2 rounded-xl transition-colors">
+                          <div className="min-w-0 pr-4">
+                            <p className="text-xs font-bold text-white truncate group-hover:text-indigo-300 transition-colors uppercase tracking-tight">{o.property_title}</p>
+                            <p className="text-[11px] font-black text-white/50 flex items-center gap-1 mt-1 font-mono">
+                               ₹{Number(o.offer_price).toLocaleString("en-IN")}
+                            </p>
+                          </div>
+                          <OfferStatusBadge status={o.status} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-            {/* Quick Links */}
-            <div className="bg-card rounded-xl border border-border p-4">
-              <h3 className="text-sm font-semibold text-foreground mb-3">Quick Actions</h3>
-              <div className="space-y-1">
-                <QuickLink href="/properties" icon={<Eye size={13} />} label="Browse Properties" />
-                <QuickLink href="/search" icon={<Search size={13} />} label="Search Properties" />
-                <QuickLink href="/properties/new" icon={<Plus size={13} />} label="List New Property" />
+                {/* My Sent Offers */}
+                <div className="bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-6 shadow-xl">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                      <BarChart3 size={18} className="text-blue-400" /> Sent Offers
+                    </h3>
+                    {sentOffers.length > 5 && (
+                      <Link href="/dashboard/my-offers" className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-colors">
+                        View More
+                      </Link>
+                    )}
+                  </div>
+                  {sentOffers.length === 0 ? (
+                    <p className="text-xs font-medium text-white/30 text-center py-4 italic">No sent offers yet</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {sentOffers.slice(0, 5).map((o) => (
+                        <div key={o.id} className="group flex items-center justify-between py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] -mx-2 px-2 rounded-xl transition-colors">
+                          <div className="min-w-0 pr-4">
+                            <p className="text-xs font-black text-white flex items-center gap-1 font-mono group-hover:text-indigo-300 transition-colors">
+                               ₹{Number(o.offer_price).toLocaleString("en-IN")}
+                            </p>
+                            <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mt-1">
+                              {new Date(o.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <OfferStatusBadge status={o.status} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
+              {/* Quick Actions */}
+              <div className="bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-8 shadow-xl">
+                <h3 className="text-base font-bold text-white tracking-tight mb-6 flex items-center gap-2">
+                   <Users size={18} className="text-indigo-400" /> Management
+                </h3>
+                <div className="space-y-2">
+                  <QuickLink href="/properties" icon={<Eye size={16} />} label="Browse Catalog" />
+                  <QuickLink href="/search" icon={<Search size={16} />} label="Dynamic Search" />
+                  <QuickLink href="/properties/new" icon={<Plus size={16} />} label="Add New Asset" />
+                  <QuickLink href="/agents" icon={<Users size={16} />} label="Chat with Agents" />
+                </div>
+              </div>
+
+            </FadeIn>
           </div>
         </div>
       </div>
@@ -507,35 +508,45 @@ export default async function DashboardPage() {
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 
 function StatCard({
-  icon, iconBg, label, value, sub,
+  icon, label, value, sub, color,
 }: {
   icon: React.ReactNode;
-  iconBg: string;
   label: string;
   value: string;
   sub: string;
+  color: "indigo" | "emerald" | "amber" | "blue";
 }) {
+  const themes = {
+    indigo: "from-indigo-500/20 to-indigo-600/5 text-indigo-400 border-indigo-500/20 shadow-indigo-100/6",
+    emerald: "from-emerald-500/20 to-emerald-600/5 text-emerald-400 border-emerald-500/20 shadow-emerald-200/6",
+    amber: "from-amber-500/20 to-amber-600/5 text-amber-400 border-amber-500/20 shadow-amber-100/6",
+    blue: "from-blue-500/20 to-blue-600/5 text-blue-400 border-blue-500/20 shadow-blue-100/6",
+  };
+  const theme = themes[color];
+
   return (
-    <div className="bg-card rounded-xl border border-border p-4">
-      <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center mb-3`}>
+    <div className={`group bg-gradient-to-br ${theme} backdrop-blur-xl rounded-[2rem] border p-7 shadow-xl hover:-translate-y-1 transition-all duration-300`}>
+      <div className={`w-12 h-12 rounded-[1.25rem] bg-white/10 flex items-center justify-center mb-6 border border-white/10 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500`}>
         {icon}
       </div>
-      <p className="text-xl font-bold text-foreground leading-none">{value}</p>
-      <p className="text-xs font-medium text-foreground mt-1">{label}</p>
-      <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>
+      <div>
+        <p className="text-3xl font-black text-white leading-none mb-2 tracking-tight group-hover:text-indigo-300 transition-colors font-mono">{value}</p>
+        <p className="text-sm font-bold text-white/50 uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-xs font-semibold text-white/30 tracking-wide">{sub}</p>
+      </div>
     </div>
   );
 }
 
 function OfferStatusBadge({ status }: { status: string }) {
-  const config: Record<string, { icon: React.ReactNode; cls: string }> = {
-    pending: { icon: <Clock size={9} />, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" },
-    accepted: { icon: <CheckCircle2 size={9} />, cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" },
-    rejected: { icon: <XCircle size={9} />, cls: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" },
+  const config = {
+    pending: { icon: <Clock size={11} />, cls: "bg-amber-500/20 text-amber-400 border-amber-500/20" },
+    accepted: { icon: <CheckCircle2 size={11} />, cls: "bg-emerald-500/20 text-emerald-400 border-emerald-500/20" },
+    rejected: { icon: <XCircle size={11} />, cls: "bg-red-500/20 text-red-400 border-red-500/20" },
   };
-  const c = config[status] ?? config.pending;
+  const c = config[status as keyof typeof config] || config.pending;
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${c.cls}`}>
+    <span className={`inline-flex items-center gap-1.5 text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border backdrop-blur-md ${c.cls}`}>
       {c.icon} {status}
     </span>
   );
@@ -545,18 +556,20 @@ function QuickLink({ href, icon, label }: { href: string; icon: React.ReactNode;
   return (
     <Link
       href={href}
-      className="flex items-center gap-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg px-2 py-2 transition-colors"
+      className="flex items-center gap-4 text-sm font-bold text-white/50 hover:text-white hover:bg-white/5 rounded-2xl px-4 py-4 transition-all duration-300 border border-transparent hover:border-white/10"
     >
-      <span className="text-muted-foreground">{icon}</span>
-      {label}
-      <ArrowRight size={11} className="ml-auto" />
+      <div className="p-2.5 rounded-xl bg-white/5 transition-colors group-hover:bg-white/10 border border-white/5">
+        {icon}
+      </div>
+      <span className="tracking-tight">{label}</span>
+      <ArrowRight size={14} className="ml-auto opacity-20 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
     </Link>
   );
 }
 
 function formatCompact(n: number): string {
   if (n >= 1_00_00_000) return `${(n / 1_00_00_000).toFixed(1)}Cr`;
-  if (n >= 1_00_000) return `${(n / 1_00_000).toFixed(1)}L`;
+  if (n >= 1_00_000) return `${(n / 1_00_00_000).toFixed(2)}Cr`; // Sticking to Cr for large values in premium feel
   if (n >= 1000) return `${(n / 1000).toFixed(0)}K`;
-  return n.toString();
+  return n.toLocaleString("en-IN");
 }
