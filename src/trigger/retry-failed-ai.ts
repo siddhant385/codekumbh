@@ -216,8 +216,10 @@ export const retryFailedAiTasks = schedules.task({
       .order("created_at", { ascending: false })
       .limit(100);
 
+    type ListedProp = NonNullable<typeof allListedProps>[number];
+
     // Group by user, take their most recent property, skip users that already have insights
-    const userPropertyMap = new Map<string, (typeof allListedProps)[0]>();
+    const userPropertyMap = new Map<string, ListedProp>();
     for (const prop of allListedProps ?? []) {
       if (!insightsUserSet.has(prop.user_id) && !userPropertyMap.has(prop.user_id)) {
         userPropertyMap.set(prop.user_id, prop);
