@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hackathon Starter",
-  description: "Next.js + Supabase + Trigger.dev + Vercel AI SDK",
+  title: "CodeHunt — AI-Powered Real Estate Intelligence",
+  description: "Smart property valuations, investment insights, and market analytics powered by AI agents with tool-calling.",
 };
 
 export default function RootLayout({
@@ -35,11 +35,9 @@ export default function RootLayout({
           companyName="CodeHunt"
           links={[
             { label: 'Home', href: '/' },
-            { label: 'For Buyers', href: '/buyers' },
-            { label: 'For Tenants', href: '/tenants' },
-            { label: 'For Owners', href: '/owners' },
-            { label: 'For Dealers/Builderws', href: '/dealers' },
-
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Properties', href: '/properties' },
+            { label: 'AI Agents', href: '/agents' },
           ]}
           profileButtonLabel="Profile"
         />

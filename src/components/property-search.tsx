@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Mic, ChevronDown } from "lucide-react";
 
 const tabs = [
@@ -26,6 +27,14 @@ export function PropertySearch() {
     const [query, setQuery] = useState("");
     const [propertyType, setPropertyType] = useState("All Residential");
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const router = useRouter();
+
+    const handleSearch = () => {
+        const params = new URLSearchParams();
+        if (query.trim()) params.set("q", query.trim());
+        if (propertyType !== "All Residential") params.set("type", propertyType.toLowerCase().replace(" ", "_"));
+        router.push(`/search?${params.toString()}`);
+    };
 
     return (
         <div className="w-full max-w-[860px] bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.10)] overflow-visible font-sans">
@@ -115,6 +124,7 @@ export function PropertySearch() {
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     placeholder="Search for locality, landmark, project, or builder"
                     className="flex-1 border-0 outline-none text-sm text-gray-800 bg-transparent px-1 py-1.5 placeholder:text-gray-400 min-w-0"
                 />
@@ -128,7 +138,10 @@ export function PropertySearch() {
                 </button>
 
                 {/* Search button */}
-                <button className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg border-0 cursor-pointer transition-colors flex-shrink-0">
+                <button
+                    onClick={handleSearch}
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg border-0 cursor-pointer transition-colors flex-shrink-0"
+                >
                     Search
                 </button>
             </div>
