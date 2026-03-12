@@ -1,10 +1,10 @@
 "use server";
 
-import Replicate from "replicate";
+import { tasks, runs } from "@trigger.dev/sdk/v3";
 import type { StudioTool } from "@/components/ai-studio/types";
-import { buildStudioPrompt, getReplicateModel } from "@/lib/ai/studio-prompts";
+import type { processStudioImage } from "@/trigger/process-studio-image";
 
-/* ── Server Action — instant AI preview via Replicate ──────────────────── */
+/* ── Server Action — AI preview via Trigger.dev → Replicate ─────────────── */
 
 export async function processImageWithAI(input: {
   /** Base64-encoded image: "data:image/jpeg;base64,..." */
@@ -13,55 +13,43 @@ export async function processImageWithAI(input: {
   preset?: string;
   removeText?: string;
   replaceText?: string;
+  /** If set, Trigger task will also persist to Supabase Storage + update DB */
+  propertyImageId?: string;
 }): Promise<
   | { success: true; outputBase64: string }
   | { success: false; error: string }
 > {
-  if (!process.env.REPLICATE_API_TOKEN) {
-    return {
-      success: false,
-      error: "REPLICATE_API_TOKEN not set — add it to .env.local",
-    };
-  }
-
-  const { prompt, guidanceScale } = buildStudioPrompt(input.tool, {
-    preset:      input.preset,
-    removeText:  input.removeText,
-    replaceText: input.replaceText,
-  });
-
   try {
-    const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
-
-    const output = await replicate.run(getReplicateModel(), {
-      input: {
-        prompt,
-        guidance:       guidanceScale,
-        steps:          30,
-        width:          1024,
-        height:         1024,
-        image_prompt:   input.imageBase64,
+    // Trigger the background task
+    const handle = await tasks.trigger<typeof processStudioImage>(
+      "process-studio-image",
+      {
+        propertyImageId: input.propertyImageId,
+        imageBase64:     input.imageBase64,
+        tool:            input.tool,
+        preset:          input.preset,
+        removeText:      input.removeText,
+        replaceText:     input.replaceText,
       },
-    });
+    );
 
-    // flux-2-pro returns a URL string or array of URL strings
-    const outputUrl = Array.isArray(output) ? output[0] : output;
+    // Poll until the task completes (max ~3 minutes, matching task maxDuration)
+    const completed = await runs.poll(handle, { pollIntervalMs: 3000 });
 
-    if (!outputUrl || typeof outputUrl !== "string") {
-      return { success: false, error: "No output returned from Replicate" };
+    if (completed.status !== "COMPLETED" || !completed.output) {
+      const errMsg = completed.status === "FAILED"
+        ? `Task failed: ${completed.error?.message ?? "unknown error"}`
+        : `Task ended with status: ${completed.status}`;
+      return { success: false, error: errMsg };
     }
 
-    // Fetch the output image and convert to base64 for the client
-    const imgRes = await fetch(outputUrl);
-    if (!imgRes.ok) {
-      return {
-        success: false,
-        error: `Failed to download result image: ${imgRes.status}`,
-      };
+    const output = completed.output;
+
+    if (!output.success) {
+      return { success: false, error: output.error };
     }
 
-    const b64 = Buffer.from(await imgRes.arrayBuffer()).toString("base64");
-    return { success: true, outputBase64: `data:image/png;base64,${b64}` };
+    return { success: true, outputBase64: output.outputBase64 };
   } catch (err) {
     return { success: false, error: String(err) };
   }

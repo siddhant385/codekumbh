@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import type { StudioPhoto, StudioTool } from "./types";
 import { STAGE_PRESETS, LAYOUT_PRESETS, ENHANCE_PRESETS } from "./constants";
 import { processImageWithAI } from "@/actions/ai-studio/process-image";
-import { triggerStudioProcessing } from "@/actions/ai-studio/trigger-studio-processing";
 
 interface AIStudioProps {
   photo: StudioPhoto;
@@ -108,18 +107,19 @@ export function AIStudio({ photo, propertyImageId, onClose, onApply }: AIStudioP
     setOutputUrl(null);
 
     if (aiMode === "live") {
-      /* ── Real API ── */
+      /* ── Real API via Trigger.dev ── */
       try {
         setLiveStatus("Converting image…");
         const base64 = await toBase64(photo.url);
 
-        setLiveStatus("Sending to Replicate AI…");
+        setLiveStatus("Processing with AI… this may take 30–60 seconds");
         const result = await processImageWithAI({
           imageBase64: base64,
           tool,
-          preset:      preset ?? layoutPreset ?? enhancePreset ?? undefined,
-          removeText:  replaceText.trim()     || undefined,
-          replaceText: replaceWithText.trim() || undefined,
+          preset:          preset ?? layoutPreset ?? enhancePreset ?? undefined,
+          removeText:      replaceText.trim()     || undefined,
+          replaceText:     replaceWithText.trim() || undefined,
+          propertyImageId: propertyImageId,
         });
 
         if (!result.success) {
@@ -134,19 +134,8 @@ export function AIStudio({ photo, propertyImageId, onClose, onApply }: AIStudioP
         setProcessing(false);
         onApply(photo.id, tool, preset ?? layoutPreset ?? enhancePreset ?? undefined, result.outputBase64);
 
-        // Fire background persistence if this image has a DB row
         if (propertyImageId) {
-          triggerStudioProcessing({
-            propertyImageId,
-            imageBase64: base64,
-            tool,
-            preset:      preset ?? layoutPreset ?? enhancePreset ?? undefined,
-            removeText:  replaceText.trim()     || undefined,
-            replaceText: replaceWithText.trim() || undefined,
-          }).then(res => {
-            if ("error" in res) toast.error(`Save failed: ${res.error}`);
-            else toast.success("AI image saved to gallery");
-          });
+          toast.success("AI image saved to gallery");
         }
       } catch (err) {
         toast.error(`Failed: ${String(err)}`);
@@ -280,7 +269,7 @@ export function AIStudio({ photo, propertyImageId, onClose, onApply }: AIStudioP
                   {aiMode === "live" ? (
                     <>
                       <p className="text-sm font-semibold text-white">{liveStatus || "Connecting…"}</p>
-                      <p className="text-[11px] text-white/50">Replicate AI — this may take 10–30 seconds</p>
+                      <p className="text-[11px] text-white/50">AI processing — this may take 30–60 seconds</p>
                     </>
                   ) : (
                     <>

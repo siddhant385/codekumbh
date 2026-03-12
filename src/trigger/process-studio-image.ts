@@ -10,8 +10,8 @@ export const processStudioImage = task({
   maxDuration: 180,
 
   run: async (payload: {
-    /** ID of the property_images row to update */
-    propertyImageId: string;
+    /** If set, persist result to Supabase Storage + update the DB row */
+    propertyImageId?: string;
     /** Base64 encoded image: "data:image/jpeg;base64,..." */
     imageBase64: string;
     tool: string;
@@ -25,7 +25,7 @@ export const processStudioImage = task({
     // ── 1. Validate API token ──────────────────────────────────────────
     if (!process.env.REPLICATE_API_TOKEN) {
       logger.error("REPLICATE_API_TOKEN not set");
-      return { success: false, error: "REPLICATE_API_TOKEN not configured" };
+      return { success: false as const, error: "REPLICATE_API_TOKEN not configured" };
     }
 
     // ── 2. Call Replicate API via SDK ──────────────────────────────────
@@ -49,20 +49,30 @@ export const processStudioImage = task({
 
     if (!outputUrl || typeof outputUrl !== "string") {
       logger.error("No output from Replicate", { replicateOutput });
-      return { success: false, error: "No output returned from Replicate" };
+      return { success: false as const, error: "No output returned from Replicate" };
     }
 
-    logger.log("Replicate success — uploading to Supabase Storage");
+    logger.log("Replicate success", { outputUrl: outputUrl.slice(0, 80) });
 
-    // ── 3. Download processed image and upload to Supabase Storage ─────
+    // ── 3. Download processed image ─────────────────────────────────────
     const imgRes = await fetch(outputUrl);
     if (!imgRes.ok) {
       logger.error("Failed to download Replicate output", { status: imgRes.status });
-      return { success: false, error: `Failed to download result: ${imgRes.status}` };
+      return { success: false as const, error: `Failed to download result: ${imgRes.status}` };
     }
 
     const processedBytes = Buffer.from(await imgRes.arrayBuffer());
-    const storagePath    = `studio/${propertyImageId}-${Date.now()}.png`;
+
+    // ── 4. If no DB row, return base64 directly (preview-only mode) ────
+    if (!propertyImageId) {
+      const b64 = processedBytes.toString("base64");
+      logger.log("Preview-only mode — returning base64");
+      return { success: true as const, outputBase64: `data:image/png;base64,${b64}`, tool, preset };
+    }
+
+    // ── 5. Upload to Supabase Storage ──────────────────────────────────
+    logger.log("Uploading to Supabase Storage");
+    const storagePath = `studio/${propertyImageId}-${Date.now()}.png`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from("property-images")
@@ -74,7 +84,7 @@ export const processStudioImage = task({
 
     if (uploadError) {
       logger.error("Storage upload failed", { error: uploadError.message });
-      return { success: false, error: uploadError.message };
+      return { success: false as const, error: uploadError.message };
     }
 
     const { data: urlData } = supabaseAdmin.storage
@@ -84,7 +94,7 @@ export const processStudioImage = task({
     const publicUrl = urlData.publicUrl;
     logger.log("Uploaded to Storage", { path: storagePath, url: publicUrl });
 
-    // ── 4. Update property_images row ────────────────────────────────────
+    // ── 6. Update property_images row ──────────────────────────────────
     const appliedEffect = { tool, preset: preset ?? null, removeText: removeText ?? null, replaceText: replaceText ?? null };
 
     const { error: updateError } = await supabaseAdmin
@@ -97,10 +107,18 @@ export const processStudioImage = task({
 
     if (updateError) {
       logger.error("DB update failed", { error: updateError.message });
-      return { success: false, error: updateError.message };
+      return { success: false as const, error: updateError.message };
     }
 
+    // Return base64 for instant client preview + public URL for persistence
+    const b64 = processedBytes.toString("base64");
     logger.log("Studio image processing complete", { propertyImageId, publicUrl });
-    return { success: true, ai_processed_url: publicUrl, tool, preset };
+    return {
+      success: true as const,
+      outputBase64: `data:image/png;base64,${b64}`,
+      ai_processed_url: publicUrl,
+      tool,
+      preset,
+    };
   },
 });
