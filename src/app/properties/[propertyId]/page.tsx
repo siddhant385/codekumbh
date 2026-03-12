@@ -15,7 +15,9 @@ import {
 } from "lucide-react";
 import { MakeOfferForm } from "@/components/property/make-offer-form";
 import { AIValuationCard } from "@/components/property/ai-valuation-card";
-import { RealtimeValuationListener, RealtimeOfferListener } from "@/components/property/realtime-listeners";
+import { PropertyContextCard } from "@/components/property/property-context-card";
+import { InvestmentInsightsCard } from "@/components/property/investment-insights-card";
+import { RealtimeValuationListener, RealtimeOfferListener, RealtimeContextListener, RealtimeInsightsListener } from "@/components/property/realtime-listeners";
 import type { Property } from "@/lib/schema/property.schema";
 import type { Offer, Valuation } from "@/lib/schema/property.schema";
 
@@ -75,10 +77,30 @@ export default async function PropertyDetailPage({ params }: Props) {
     .maybeSingle();
   const valuation = (latestValuation ?? null) as Valuation | null;
 
+  // Fetch property context (neighbourhood data)
+  const { data: propertyContext } = await supabase
+    .from("property_context")
+    .select("*")
+    .eq("property_id", propertyId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // Fetch investment insights for this property's owner
+  const { data: investmentInsight } = await supabase
+    .from("ai_investment_insights")
+    .select("*")
+    .eq("user_id", p.owner_id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       {/* Supabase Realtime Listeners */}
       <RealtimeValuationListener propertyId={p.id} />
+      <RealtimeContextListener propertyId={p.id} />
+      <RealtimeInsightsListener userId={user.id} />
       {isOwner && <RealtimeOfferListener propertyId={p.id} />}
 
       <div className="max-w-4xl mx-auto space-y-6">
@@ -196,6 +218,12 @@ export default async function PropertyDetailPage({ params }: Props) {
               askingPrice={p.asking_price}
               valuation={valuation}
             />
+
+            {/* Neighbourhood Intelligence */}
+            <PropertyContextCard context={propertyContext ?? null} />
+
+            {/* Investment Insights */}
+            <InvestmentInsightsCard insight={investmentInsight ?? null} />
           </div>
 
           {/* Sidebar */}

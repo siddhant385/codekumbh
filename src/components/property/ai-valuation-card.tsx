@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestValuation } from "@/actions/property/property";
-import { useRouter } from "next/navigation";
 import type { Valuation } from "@/lib/schema/property.schema";
 
 interface StructuredFactors {
@@ -46,7 +45,6 @@ export function AIValuationCard({
   valuation,
 }: Props) {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleGenerate() {
     setLoading(true);
@@ -57,12 +55,12 @@ export function AIValuationCard({
         setLoading(false);
         return;
       }
-      toast.success("AI valuation started! Refreshing in a few seconds...");
-      // Poll for completion — wait then refresh
+      toast.success("AI valuation started! The report will appear automatically via realtime.");
+      // The RealtimeValuationListener will auto-refresh the page when the result arrives.
+      // Set a safety timeout to reset the button in case realtime doesn't fire.
       setTimeout(() => {
-        router.refresh();
         setLoading(false);
-      }, 12000);
+      }, 60000);
     } catch {
       toast.error("Failed to start valuation");
       setLoading(false);

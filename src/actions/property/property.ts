@@ -1,5 +1,6 @@
 "use server";
 
+import { tasks } from "@trigger.dev/sdk/v3";
 import { createClient } from "@/lib/supabase/server";
 import {
   createPropertySchema,
@@ -7,6 +8,9 @@ import {
   type Property,
   type Offer,
 } from "@/lib/schema/property.schema";
+import type { generatePropertyValuation } from "@/trigger/property-valuation";
+import type { enrichPropertyContext } from "@/trigger/property-context";
+import type { generateInvestmentInsights } from "@/trigger/investment-insights";
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -73,6 +77,60 @@ export async function createProperty(
     .single();
 
   if (error) return { error: error.message };
+
+  // ── Auto-trigger 3 AI background tasks on property creation ──────
+  const propertyPayload = {
+    title: parsed.data.title,
+    property_type: parsed.data.property_type,
+    address: parsed.data.address,
+    city: parsed.data.city,
+    state: parsed.data.state,
+    country: parsed.data.country,
+    area_sqft: parsed.data.area_sqft,
+    bedrooms: parsed.data.bedrooms ?? null,
+    bathrooms: parsed.data.bathrooms ?? null,
+    asking_price: parsed.data.asking_price,
+    description: parsed.data.description || null,
+  };
+
+  try {
+    // 1. AI Property Valuation
+    await tasks.trigger<typeof generatePropertyValuation>(
+      "generate-property-valuation",
+      {
+        propertyId: data.id,
+        userId,
+        propertyData: {
+          ...propertyPayload,
+          year_built: parsed.data.year_built ?? null,
+          lot_size: parsed.data.lot_size ?? null,
+        },
+      }
+    );
+
+    // 2. Property Context Enrichment
+    await tasks.trigger<typeof enrichPropertyContext>(
+      "enrich-property-context",
+      {
+        propertyId: data.id,
+        propertyData: propertyPayload,
+      }
+    );
+
+    // 3. Investment Insights
+    await tasks.trigger<typeof generateInvestmentInsights>(
+      "generate-investment-insights",
+      {
+        propertyId: data.id,
+        userId,
+        propertyData: propertyPayload,
+      }
+    );
+  } catch (triggerErr) {
+    // Don't fail the property creation if triggers fail
+    console.error("Failed to trigger background AI tasks:", triggerErr);
+  }
+
   return { data: data as Property };
 }
 

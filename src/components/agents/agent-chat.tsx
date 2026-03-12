@@ -15,6 +15,7 @@ import {
 import { sendAgentMessage } from "@/actions/agents/chat";
 import { toast } from "sonner";
 import { useRealtimeSubscription } from "@/lib/supabase/realtime";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 
 interface Message {
   id: string;
@@ -345,7 +346,7 @@ export function AgentChat({ agentId, agentName, placeholder }: AgentChatProps) {
                       </div>
                     </div>
                   ) : (
-                    msg.content
+                    <MarkdownRenderer content={msg.content} />
                   )}
                 </div>
                 {msg.role === "user" && (
