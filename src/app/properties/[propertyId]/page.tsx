@@ -21,6 +21,7 @@ import { PropertyImageGallery } from "@/components/property/property-image-galle
 import { OfferActions } from "@/components/property/offer-actions";
 import { PropertyStatusManager } from "@/components/property/property-status-manager";
 import { RealtimeOfferListener, RealtimeContextListener } from "@/components/property/realtime-listeners";
+import { AIValuationCard } from "@/components/property/ai-valuation-card";
 import type { Property, PropertyImage, Offer } from "@/lib/schema/property.schema";
 
 interface Props {
@@ -210,13 +211,13 @@ export default async function PropertyDetailPage({ params }: Props) {
             )}
 
             {/* Neighbourhood Intelligence */}
-            <PropertyContextCard context={propertyContext ?? null} />
+            <PropertyContextCard context={propertyContext ?? null} city={p.city} propertyType={p.property_type} />
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-4 self-start sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {/* Price Card */}
-            <div className="bg-card rounded-xl border border-border p-5 sticky top-24">
+            <div className="bg-card rounded-xl border border-border p-5">
               <p className="text-sm text-muted-foreground mb-1">Asking Price</p>
               <p className="flex items-center gap-0.5 text-3xl font-bold text-foreground">
                 <IndianRupee size={24} />
@@ -275,6 +276,14 @@ export default async function PropertyDetailPage({ params }: Props) {
                 </>
               )}
             </div>
+
+            {/* AI Valuation Card */}
+            <AIValuationCard
+              askingPrice={p.asking_price ? Number(p.asking_price) : null}
+              propertyType={p.property_type}
+              city={p.city}
+              areaSqft={p.area_sqft ? Number(p.area_sqft) : null}
+            />
           </div>
         </div>
       </div>
