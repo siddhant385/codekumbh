@@ -6,6 +6,8 @@ import { PromptForm } from "@/components/ai/prompt-form";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { GenerationsHistory } from "@/components/ai/generations-history";
 import type { Generation } from "@/lib/schema";
+import { PropertySearch } from "@/components/property-search";
+
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -13,7 +15,7 @@ export default async function HomePage() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 gap-8">
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold tracking-tight">Hello World</h1>
           <p className="text-muted-foreground">Welcome to the Hackathon Starter. Please log in to continue.</p>
@@ -21,6 +23,7 @@ export default async function HomePage() {
             <Link href="/auth/login">Log In</Link>
           </Button>
         </div>
+        <PropertySearch />
       </div>
     );
   }
@@ -33,27 +36,20 @@ export default async function HomePage() {
     .limit(10);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center p-4 gap-8">
+      {/* Property Search Bar */}
+      <PropertySearch />
+
       <div className="w-full max-w-2xl space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        {/* <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">AI Dashboard</h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
           <LogoutButton />
-        </div>
+        </div> */}
 
-        {/* Prompt card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>New Prompt</CardTitle>
-            <CardDescription>Submit a prompt — it runs as a background task and streams back the result.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PromptForm />
-          </CardContent>
-        </Card>
 
         {/* History — live via Supabase Realtime */}
         <GenerationsHistory

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import Navbar from "@/components/navbar";
 import "@/lib/env"; // Validate required env vars at startup
 
 const geistSans = Geist({
@@ -26,9 +27,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Navbar
+          companyName="CodeHunt"
+          links={[
+            { label: 'Home', href: '/' },
+            { label: 'Features', href: '/features' },
+            { label: 'Pricing', href: '/pricing' },
+            { label: 'Contact', href: '/contact' },
+          ]}
+          profileButtonLabel="Profile"
+        />
         {children}
         <Toaster richColors position="top-right" />
       </body>
