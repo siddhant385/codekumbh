@@ -70,7 +70,9 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone()
         url.pathname = '/onboarding'
         const redirectResponse = NextResponse.redirect(url)
-        redirectResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
+          redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+        })
         return redirectResponse
       }
     }
