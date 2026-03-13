@@ -190,8 +190,7 @@ export function AIStudio({ photo, propertyImageId, onClose, onApply }: AIStudioP
       }
       if (tool === "objects") {
         mockOutputUrl =
-          "https://dkzbycoatuuzjakcaryb.supabase.co/storage/v1/object/public/demo/bedroom.png";
-
+          "https://dkzbycoatuuzjakcaryb.supabase.co/storage/v1/object/public/demo/refrigertor%20replace%20bedroom.png";
         setOutputUrl(mockOutputUrl);
       }
       
