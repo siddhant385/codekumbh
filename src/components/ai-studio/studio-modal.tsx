@@ -174,11 +174,35 @@ export function AIStudio({ photo, propertyImageId, onClose, onApply }: AIStudioP
       }
     } else {
       /* ── Demo mock ── */
-      setTimeout(() => {
-        setProcessing(false);
-        setDone(true);
-        onApply(photo.id, tool, preset ?? layoutPreset ?? enhancePreset ?? undefined);
-      }, 2800);
+      /* ── Demo mock ── */
+    setTimeout(() => {
+      setProcessing(false);
+      setDone(true);
+
+      // Yahan check lagaya hai specifically organise tool ke liye
+      let mockOutputUrl = undefined;
+
+      if (tool === "organise") {
+        mockOutputUrl =
+          "https://dkzbycoatuuzjakcaryb.supabase.co/storage/v1/object/public/demo/bedroom.png";
+
+        setOutputUrl(mockOutputUrl);
+      }
+      if (tool === "objects") {
+        mockOutputUrl =
+          "https://dkzbycoatuuzjakcaryb.supabase.co/storage/v1/object/public/demo/bedroom.png";
+
+        setOutputUrl(mockOutputUrl);
+      }
+      
+
+      onApply(
+        photo.id,
+        tool,
+        preset ?? layoutPreset ?? enhancePreset ?? undefined,
+        mockOutputUrl // Parent ko bhi pata chal jayega ki ye image aayi h
+      );
+    }, 2800);
     }
   }
 
